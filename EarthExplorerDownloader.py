@@ -7,6 +7,7 @@
 """
 
 import json
+import csv
 
 class EarthExplorerDownloader(object):
     SETTINGS_PATH = "./settings.json"
@@ -18,9 +19,16 @@ class EarthExplorerDownloader(object):
         self.user_account = settings['user']['account']
         self.user_password = settings['user']['password']
 
+    def __read_query_csv(self):
+        queryDicts = []
+        with open("./query.csv") as f:
+            rows = csv.DictReader(f)
+            queryDicts = [ d for d in rows ]
+        return queryDicts
 
     def go(self):
-        pass
+        queryDicts = self.__read_query_csv()
+        print(queryDicts[0]['dataset'])
 
 
 downloader = EarthExplorerDownloader()
