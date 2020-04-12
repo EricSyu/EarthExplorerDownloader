@@ -50,11 +50,21 @@ class EarthExplorerDownloader(object):
         api.logout()
         return imgInfos
 
+    def __save2csv(self, imagesInfo):
+        fieldnames=["displayId", "acquisitionDate", "browseUrl", "cloudCover", "dataAccessUrl", 
+                    "downloadUrl", "endTime", "entityId", "fgdcMetadataUrl", "metadataUrl", "modifiedDate",
+                    "orderUrl", "sceneBounds", "sceneBounds", "startTime"]
+        with open('./out_file2.csv', 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames)
+            writer.writeheader()
+            for imgInfo in imagesInfo:
+                ss = { field: imgInfo[field] for field in fieldnames }
+                writer.writerow(ss)
 
     def go(self):
         queryDicts = self.__read_query_csv()
         imgInfos = self.__search_images(queryDicts)
-
+        self.__save2csv(imgInfos)
 
 
 downloader = EarthExplorerDownloader()
