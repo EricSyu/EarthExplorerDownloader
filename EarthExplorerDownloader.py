@@ -9,6 +9,7 @@
 import json
 import csv
 import landsatxplore.api as lse
+import asyncio
 
 class EarthExplorerDownloader(object):
     SETTINGS_PATH = "./settings.json"
@@ -41,13 +42,23 @@ class EarthExplorerDownloader(object):
             if id == qd['field']:
                 matchedScenes.append(s)
         return matchedScenes
+
+    async def __search_scenes_async(self, api, qd):
+        return await asyncio.get_running_loop().run_in_executor(None, self.__search_scenes, api, qd)
     
     def __search_images(self, queryDicts):
         api = lse.API(self.user_account, self.user_password)
-        imgInfos = []
+        loop = asyncio.get_event_loop()
+        tasks = []
         for qd in queryDicts:
-            imgInfos += self.__search_scenes(api, qd)
+            task = loop.create_task(self.__search_scenes_async(api, qd))
+            tasks.append(task)
+        loop.run_until_complete(asyncio.wait(tasks))
         api.logout()
+
+        imgInfos = []
+        for t in tasks:
+            imgInfos += t.result()
         return imgInfos
 
     def __save2csv(self, imagesInfo):
