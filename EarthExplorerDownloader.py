@@ -58,8 +58,7 @@ class EarthExplorerDownloader(object):
             writer = csv.DictWriter(csvfile, fieldnames)
             writer.writeheader()
             for imgInfo in imagesInfo:
-                ss = { field: imgInfo[field] for field in fieldnames }
-                writer.writerow(ss)
+                writer.writerow({ field: imgInfo[field] for field in fieldnames })
 
     def go(self):
         queryDicts = self.__read_query_csv()
