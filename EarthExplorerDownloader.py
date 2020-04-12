@@ -20,10 +20,12 @@ class EarthExplorerDownloader(object):
 
         self.user_account = settings['user']['account']
         self.user_password = settings['user']['password']
+        self.query_csv_path = settings['path']['query_csv']
+        self.save_searched_info_path = settings['path']['save_searched_info_csv']
 
     def __read_query_csv(self):
         queryDicts = []
-        with open("./query.csv") as f:
+        with open(self.query_csv_path) as f:
             rows = csv.DictReader(f)
             queryDicts = [ d for d in rows if d["dataset"][0] != '#' ]
         return queryDicts
@@ -43,29 +45,19 @@ class EarthExplorerDownloader(object):
                 matchedScenes.append(s)
         return matchedScenes
 
-    async def __search_scenes_async(self, api, qd):
-        return await asyncio.get_running_loop().run_in_executor(None, self.__search_scenes, api, qd)
-    
     def __search_images(self, queryDicts):
         api = lse.API(self.user_account, self.user_password)
-        loop = asyncio.get_event_loop()
-        tasks = []
-        for qd in queryDicts:
-            task = loop.create_task(self.__search_scenes_async(api, qd))
-            tasks.append(task)
-        loop.run_until_complete(asyncio.wait(tasks))
-        api.logout()
-
         imgInfos = []
-        for t in tasks:
-            imgInfos += t.result()
+        for qd in queryDicts:
+            imgInfos += self.__search_scenes(api, qd)
+        api.logout()
         return imgInfos
 
     def __save2csv(self, imagesInfo):
         fieldnames=["displayId", "acquisitionDate", "browseUrl", "cloudCover", "dataAccessUrl", 
                     "downloadUrl", "endTime", "entityId", "fgdcMetadataUrl", "metadataUrl", "modifiedDate",
                     "orderUrl", "sceneBounds", "sceneBounds", "startTime"]
-        with open('./out_file2.csv', 'w') as csvfile:
+        with open(self.save_searched_info_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames)
             writer.writeheader()
             for imgInfo in imagesInfo:
@@ -75,7 +67,7 @@ class EarthExplorerDownloader(object):
         queryDicts = self.__read_query_csv()
         imgInfos = self.__search_images(queryDicts)
         self.__save2csv(imgInfos)
-
+        print('Finish!! Total images:', len(imgInfos))
 
 downloader = EarthExplorerDownloader()
 downloader.go()
