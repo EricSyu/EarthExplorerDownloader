@@ -8,6 +8,7 @@
 
 import json
 import csv
+import landsatxplore.api as lse
 
 class EarthExplorerDownloader(object):
     SETTINGS_PATH = "./settings.json"
@@ -23,12 +24,37 @@ class EarthExplorerDownloader(object):
         queryDicts = []
         with open("./query.csv") as f:
             rows = csv.DictReader(f)
-            queryDicts = [ d for d in rows ]
+            queryDicts = [ d for d in rows if d["dataset"][0] != '#' ]
         return queryDicts
+
+    def __search_scenes(self, api, qd):
+        scenes = api.search(
+            dataset = str.strip(qd['dataset']),
+            latitude = float(str.strip(qd['latitude'])),
+            longitude = float(str.strip(qd['longitude'])),
+            start_date = str.strip(qd['start_date']),
+            end_date = str.strip(qd['end_date']),
+            max_cloud_cover = int(str.strip(qd['max_cloud_cover'])))
+        matchedScenes = []
+        for s in scenes:
+            id = s['displayId'].split('_')[2]
+            if id == qd['field']:
+                matchedScenes.append(s)
+        return matchedScenes
+    
+    def __search_images(self, queryDicts):
+        api = lse.API(self.user_account, self.user_password)
+        imgInfos = []
+        for qd in queryDicts:
+            imgInfos += self.__search_scenes(api, qd)
+        api.logout()
+        return imgInfos
+
 
     def go(self):
         queryDicts = self.__read_query_csv()
-        print(queryDicts[0]['dataset'])
+        imgInfos = self.__search_images(queryDicts)
+
 
 
 downloader = EarthExplorerDownloader()
