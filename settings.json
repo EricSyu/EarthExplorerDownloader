@@ -5,6 +5,7 @@
     },
     "path": {
         "query_csv": "./query.csv",
-        "save_searched_info_csv": "./out.csv"
+        "save_searched_info_csv": "./out.csv",
+        "output_dir": "./download"
     }
 }

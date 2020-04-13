@@ -10,6 +10,8 @@ import json
 import csv
 import landsatxplore.api as lse
 import asyncio
+from landsatxplore.earthexplorer import EarthExplorer
+import os
 
 class EarthExplorerDownloader(object):
     SETTINGS_PATH = "./settings.json"
@@ -22,6 +24,7 @@ class EarthExplorerDownloader(object):
         self.user_password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
         self.save_searched_info_path = settings['path']['save_searched_info_csv']
+        self.output_dir = settings['path']['output_dir']
 
     def __read_query_csv(self):
         queryDicts = []
@@ -45,7 +48,7 @@ class EarthExplorerDownloader(object):
                 matchedScenes.append(s)
         return matchedScenes
 
-    def __search_images(self, queryDicts):
+    def __search(self, queryDicts):
         api = lse.API(self.user_account, self.user_password)
         imgInfos = []
         for qd in queryDicts:
@@ -63,11 +66,23 @@ class EarthExplorerDownloader(object):
             for imgInfo in imagesInfo:
                 writer.writerow({ field: imgInfo[field] for field in fieldnames })
 
+    def __download_scene(self, scene_id, output_dir):
+        ee = EarthExplorer(self.user_account, self.user_password)
+        ee.download(scene_id, output_dir)
+        ee.logout()
+
+    def __download(self, scene_id_list):
+        if not os.path.exists(self.output_dir):
+            os.mkdir(self.output_dir)
+        for s in scene_id_list:
+            self.__download_scene(s, self.output_dir)
+
     def go(self):
         queryDicts = self.__read_query_csv()
-        imgInfos = self.__search_images(queryDicts)
+        imgInfos = self.__search(queryDicts)
         self.__save2csv(imgInfos)
         print('Finish!! Total images:', len(imgInfos))
+        self.__download([ imgInfo['displayId'] for imgInfo in imgInfos ])
 
 downloader = EarthExplorerDownloader()
 downloader.go()
