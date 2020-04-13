@@ -12,6 +12,9 @@ import landsatxplore.api as lse
 import asyncio
 from landsatxplore.earthexplorer import EarthExplorer
 import os
+import concurrent.futures as ccrtf
+from random import randint
+from time import sleep
 
 class EarthExplorerDownloader(object):
     SETTINGS_PATH = "./settings.json"
@@ -67,22 +70,37 @@ class EarthExplorerDownloader(object):
                 writer.writerow({ field: imgInfo[field] for field in fieldnames })
 
     def __download_scene(self, scene_id, output_dir):
-        ee = EarthExplorer(self.user_account, self.user_password)
-        ee.download(scene_id, output_dir)
-        ee.logout()
+        try:
+            ee = EarthExplorer(self.user_account, self.user_password)
+            ee.download(scene_id, output_dir)
+            ee.logout()
+        except Exception as e:
+            print(e)
+    
+    async def __download_scene_async(self, executor, scene_id, output_dir):
+        sleep(1)
+        return await asyncio.get_running_loop().run_in_executor(executor, self.__download_scene, scene_id, output_dir)
 
-    def __download(self, scene_id_list):
+    def __create_output_folder(self):
         if not os.path.exists(self.output_dir):
             os.mkdir(self.output_dir)
-        for s in scene_id_list:
-            self.__download_scene(s, self.output_dir)
+
+    def __download_async(self, scene_id_list):
+        executor = ccrtf.ThreadPoolExecutor(max_workers=20)
+        loop = asyncio.get_event_loop()
+        tasks = []
+        for scene_id in scene_id_list:
+            task = loop.create_task(self.__download_scene_async(executor, scene_id, self.output_dir))
+            tasks.append(task)
+        loop.run_until_complete(asyncio.wait(tasks))
 
     def go(self):
         queryDicts = self.__read_query_csv()
         imgInfos = self.__search(queryDicts)
         self.__save2csv(imgInfos)
         print('Finish!! Total images:', len(imgInfos))
-        self.__download([ imgInfo['displayId'] for imgInfo in imgInfos ])
+        self.__create_output_folder()
+        self.__download_async([ imgInfo['displayId'] for imgInfo in imgInfos ])
 
 downloader = EarthExplorerDownloader()
 downloader.go()
