@@ -26,12 +26,11 @@ class EarthExplorerDownloader(object):
         self.user_account = settings['user']['account']
         self.user_password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
-        self.save_searched_info_path = settings['path']['save_searched_info_csv']
         self.output_dir = settings['path']['output_dir']
 
-    def __read_query_csv(self):
+    def __read_query_csv(self, csvPath):
         queryDicts = []
-        with open(self.query_csv_path) as f:
+        with open(csvPath) as f:
             rows = csv.DictReader(f)
             queryDicts = [ d for d in rows if d["dataset"][0] != '#' ]
         return queryDicts
@@ -59,23 +58,27 @@ class EarthExplorerDownloader(object):
         api.logout()
         return imgInfos
 
-    def __save2csv(self, imagesInfo):
-        fieldnames=["displayId", "acquisitionDate", "browseUrl", "cloudCover", "dataAccessUrl", 
-                    "downloadUrl", "endTime", "entityId", "fgdcMetadataUrl", "metadataUrl", "modifiedDate",
-                    "orderUrl", "sceneBounds", "sceneBounds", "startTime"]
-        with open(self.save_searched_info_path, 'w') as csvfile:
+    def __save2csv(self, sceneInfos, csvPath):
+        if not sceneInfos:
+            return
+        fieldnames = [ s for s in sceneInfos[0] ]
+        with open(csvPath, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames)
             writer.writeheader()
-            for imgInfo in imagesInfo:
-                writer.writerow({ field: imgInfo[field] for field in fieldnames })
+            for si in sceneInfos:
+                writer.writerow({ field: si[field] for field in fieldnames })
 
     def __download_scene(self, scene_id, output_dir):
         try:
             ee = EarthExplorer(self.user_account, self.user_password)
             ee.download(scene_id, output_dir)
             ee.logout()
-        except Exception as e:
-            print(e)
+            return True
+        except Exception:
+            scene_file = f'{output_dir}/{scene_id}'
+            if os.path.exists(scene_file):
+                os.remove(scene_file)
+            return False
     
     async def __download_scene_async(self, executor, scene_id, output_dir):
         sleep(1)
@@ -85,22 +88,27 @@ class EarthExplorerDownloader(object):
         if not os.path.exists(self.output_dir):
             os.mkdir(self.output_dir)
 
-    def __download_async(self, scene_id_list):
+    def __download(self, scene_ids):
         executor = ccrtf.ThreadPoolExecutor(max_workers=20)
         loop = asyncio.get_event_loop()
         tasks = []
-        for scene_id in scene_id_list:
+        for scene_id in scene_ids:
             task = loop.create_task(self.__download_scene_async(executor, scene_id, self.output_dir))
             tasks.append(task)
         loop.run_until_complete(asyncio.wait(tasks))
 
     def go(self):
-        queryDicts = self.__read_query_csv()
-        imgInfos = self.__search(queryDicts)
-        self.__save2csv(imgInfos)
-        print('Finish!! Total images:', len(imgInfos))
-        self.__create_output_folder()
-        self.__download_async([ imgInfo['displayId'] for imgInfo in imgInfos ])
+        print(f'Read csv: {self.query_csv_path}')
+        queryDicts = self.__read_query_csv(self.query_csv_path)
+        print('Start to search...')
+        sceneInfos = self.__search(queryDicts)
+        print(f'{len(sceneInfos)} scences found !!')
+        if sceneInfos:
+            print('Start to download...')
+            self.__create_output_folder()
+            self.__download_async([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+        print('Finish.')
+        
 
 downloader = EarthExplorerDownloader()
 downloader.go()
