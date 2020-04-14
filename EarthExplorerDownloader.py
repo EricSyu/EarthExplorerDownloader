@@ -70,12 +70,12 @@ class EarthExplorerDownloader(object):
             ee = EarthExplorer(self.username, self.password)
             ee.download(scene_id, output_dir)
             ee.logout()
-            return True
+            return True, scene_id
         except Exception:
             scene_file = f'{output_dir}/{scene_id}.tar.gz'
             if os.path.exists(scene_file):
                 os.remove(scene_file)
-            return False
+            return False, scene_id
     
     async def __download_scene_async(self, executor, scene_id, output_dir):
         sleep(1)
@@ -94,6 +94,7 @@ class EarthExplorerDownloader(object):
             task = loop.create_task(self.__download_scene_async(executor, scene_id, self.output_dir))
             tasks.append(task)
         loop.run_until_complete(asyncio.wait(tasks))
+        return [ t.result() for t in tasks ]
 
     def go(self):
         print(f'Read csv: {self.query_csv_path}')
@@ -104,7 +105,8 @@ class EarthExplorerDownloader(object):
         if sceneInfos:
             print('Start to download...')
             self.__create_output_folder()
-            self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+            results = self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+            print(results)
         print('Finish.')
         
 
