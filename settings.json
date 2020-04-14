@@ -6,5 +6,6 @@
     "path": {
         "query_csv": "./query.csv",
         "output_dir": "./downloads"
-    }
+    },
+    "max_threads": 5
 }

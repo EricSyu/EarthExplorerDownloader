@@ -22,11 +22,11 @@ class EarthExplorerDownloader(object):
     def __init__(self):
         with open(self.SETTINGS_PATH) as f:
             settings = json.load(f)
-
         self.username = settings['user']['username']
         self.password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
         self.output_dir = settings['path']['output_dir']
+        self.max_threads = settings['max_threads']
 
     def __read_query_csv(self, csvPath):
         queryDicts = []
@@ -89,7 +89,8 @@ class EarthExplorerDownloader(object):
             os.mkdir(self.output_dir)
 
     def __download(self, scene_ids):
-        executor = ccrtf.ThreadPoolExecutor(max_workers=20)
+        max_threads = self.max_threads if self.max_threads > 0 else None
+        executor = ccrtf.ThreadPoolExecutor(max_workers=max_threads)
         loop = asyncio.get_event_loop()
         tasks = []
         for scene_id in scene_ids:
@@ -106,7 +107,7 @@ class EarthExplorerDownloader(object):
         if sceneInfos:
             print('Start to download...')
             self.__create_output_folder()
-            self.__download_async([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+            self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
         print('Finish.')
         
 
