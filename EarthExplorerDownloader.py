@@ -120,7 +120,7 @@ class EarthExplorerDownloader(object):
             with open(self.fail_txt_path) as file:
                 failed_scene_ids = file.readlines()
             print(f'偵測到上一次下載失敗的{len(failed_scene_ids)}個Cases')
-            redownload_ans = input(f'請問是否需要重新下載(Y/N):')
+            redownload_ans = input(f'請問是否需要重新下載(Y/N):').upper()
             if redownload_ans == 'Y' :
                 failed_scene_ids = [ s.strip('\n') for s in failed_scene_ids ]
                 self.start_download_flow(failed_scene_ids)
