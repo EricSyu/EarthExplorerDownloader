@@ -147,7 +147,7 @@ cython_debug/
 # Local History for Visual Studio Code
 .history/
 
-# .csv
+# custom
 *.csv
-
 downloads/
+*.txt
