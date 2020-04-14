@@ -72,7 +72,7 @@ class EarthExplorerDownloader(object):
             ee.logout()
             return True
         except Exception:
-            scene_file = f'{output_dir}/{scene_id}'
+            scene_file = f'{output_dir}/{scene_id}.tar.gz'
             if os.path.exists(scene_file):
                 os.remove(scene_file)
             return False
