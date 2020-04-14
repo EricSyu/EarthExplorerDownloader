@@ -10,7 +10,6 @@ import asyncio
 from landsatxplore.earthexplorer import EarthExplorer
 import os
 import concurrent.futures as ccrtf
-from random import randint
 from time import sleep
 
 class EarthExplorerDownloader(object):
@@ -26,12 +25,12 @@ class EarthExplorerDownloader(object):
         self.fail_txt_path = settings['path']['fail_list_txt']
         self.max_threads = settings['max_threads']
 
-    def __read_query_csv(self, csvPath):
-        queryDicts = []
-        with open(csvPath) as f:
+    def __read_query_csv(self, csv_path):
+        query_dicts = []
+        with open(csv_path) as f:
             rows = csv.DictReader(f)
-            queryDicts = [ d for d in rows if d["dataset"][0] != '#' ]
-        return queryDicts
+            query_dicts = [ d for d in rows if d["dataset"][0] != '#' ]
+        return query_dicts
 
     def __search_scenes(self, api, qd):
         scenes = api.search(
@@ -41,29 +40,29 @@ class EarthExplorerDownloader(object):
             start_date = str.strip(qd['start_date']),
             end_date = str.strip(qd['end_date']),
             max_cloud_cover = int(str.strip(qd['max_cloud_cover'])))
-        matchedScenes = []
+        matched_scenes = []
         for s in scenes:
             id = s['displayId'].split('_')[2]
             if id == qd['field']:
-                matchedScenes.append(s)
-        return matchedScenes
+                matched_scenes.append(s)
+        return matched_scenes
 
-    def __search(self, queryDicts):
+    def __search(self, query_dicts):
         api = lse.API(self.username, self.password)
         imgInfos = []
-        for qd in queryDicts:
+        for qd in query_dicts:
             imgInfos += self.__search_scenes(api, qd)
         api.logout()
         return imgInfos
 
-    def __save2csv(self, sceneInfos, csvPath):
-        if not sceneInfos:
+    def __save2csv(self, scene_infos, csv_path):
+        if not scene_infos:
             return
-        fieldnames = [ s for s in sceneInfos[0] ]
-        with open(csvPath, 'w') as csvfile:
+        fieldnames = [ s for s in scene_infos[0] ]
+        with open(csv_path, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames)
             writer.writeheader()
-            for si in sceneInfos:
+            for si in scene_infos:
                 writer.writerow({ field: si[field] for field in fieldnames })
 
     def __download_scene(self, scene_id, output_dir):
@@ -128,11 +127,11 @@ class EarthExplorerDownloader(object):
                 return
 
         print(f'Read csv: {self.query_csv_path}')
-        queryDicts = self.__read_query_csv(self.query_csv_path)
+        query_dicts = self.__read_query_csv(self.query_csv_path)
         print('Start to search...')
-        sceneInfos = self.__search(queryDicts)
-        print(f'{len(sceneInfos)} scences found !!')
-        self.start_download_flow([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+        scene_infos = self.__search(query_dicts)
+        print(f'{len(scene_infos)} scences found !!')
+        self.start_download_flow([ sceneInfo['displayId'] for sceneInfo in scene_infos ])
 
 
 downloader = EarthExplorerDownloader()
