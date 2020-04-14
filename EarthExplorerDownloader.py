@@ -22,8 +22,9 @@ class EarthExplorerDownloader(object):
         self.username = settings['user']['username']
         self.password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
-        self.output_dir = settings['path']['output_dir']
+        self.download_dir = settings['path']['download_dir']
         self.max_threads = settings['max_threads']
+        self.fail_txt_path = settings['fail_list_txt']
 
     def __read_query_csv(self, csvPath):
         queryDicts = []
@@ -70,20 +71,20 @@ class EarthExplorerDownloader(object):
             ee = EarthExplorer(self.username, self.password)
             ee.download(scene_id, output_dir)
             ee.logout()
-            return True, scene_id
+            return scene_id, True
         except Exception:
             scene_file = f'{output_dir}/{scene_id}.tar.gz'
             if os.path.exists(scene_file):
                 os.remove(scene_file)
-            return False, scene_id
+            return scene_id, False
     
     async def __download_scene_async(self, executor, scene_id, output_dir):
         sleep(1)
         return await asyncio.get_running_loop().run_in_executor(executor, self.__download_scene, scene_id, output_dir)
 
     def __create_output_folder(self):
-        if not os.path.exists(self.output_dir):
-            os.mkdir(self.output_dir)
+        if not os.path.exists(self.download_dir):
+            os.mkdir(self.download_dir)
 
     def __download(self, scene_ids):
         max_threads = self.max_threads if self.max_threads > 0 else None
@@ -91,10 +92,14 @@ class EarthExplorerDownloader(object):
         loop = asyncio.get_event_loop()
         tasks = []
         for scene_id in scene_ids:
-            task = loop.create_task(self.__download_scene_async(executor, scene_id, self.output_dir))
+            task = loop.create_task(self.__download_scene_async(executor, scene_id, self.download_dir))
             tasks.append(task)
         loop.run_until_complete(asyncio.wait(tasks))
-        return [ t.result() for t in tasks ]
+        return [ { 'scene_id': t.result()[0], 'is_sucessful': t.result()[1] } for t in tasks ]
+
+    def __save2txt(self, error_list, txt_path):
+        with open(txt_path, 'w') as file:
+            file.writelines(error_list)
 
     def go(self):
         print(f'Read csv: {self.query_csv_path}')
@@ -106,7 +111,7 @@ class EarthExplorerDownloader(object):
             print('Start to download...')
             self.__create_output_folder()
             results = self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
-            print(results)
+            self.__save2txt([ r['scene_id'] for r in results if not r['is_sucessful'] ], self.fail_txt_path)
         print('Finish.')
         
 

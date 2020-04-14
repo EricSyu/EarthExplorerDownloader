@@ -5,7 +5,8 @@
     },
     "path": {
         "query_csv": "./query.csv",
-        "output_dir": "./downloads"
+        "download_dir": "./downloads",
+        "fail_list_txt": "./fail_list.txt"
     },
     "max_threads": 5
 }
