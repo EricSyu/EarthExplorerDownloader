@@ -23,8 +23,8 @@ class EarthExplorerDownloader(object):
         with open(self.SETTINGS_PATH) as f:
             settings = json.load(f)
 
-        self.user_account = settings['user']['account']
-        self.user_password = settings['user']['password']
+        self.username = settings['user']['username']
+        self.password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
         self.output_dir = settings['path']['output_dir']
 
@@ -51,7 +51,7 @@ class EarthExplorerDownloader(object):
         return matchedScenes
 
     def __search(self, queryDicts):
-        api = lse.API(self.user_account, self.user_password)
+        api = lse.API(self.username, self.password)
         imgInfos = []
         for qd in queryDicts:
             imgInfos += self.__search_scenes(api, qd)
@@ -70,7 +70,7 @@ class EarthExplorerDownloader(object):
 
     def __download_scene(self, scene_id, output_dir):
         try:
-            ee = EarthExplorer(self.user_account, self.user_password)
+            ee = EarthExplorer(self.username, self.password)
             ee.download(scene_id, output_dir)
             ee.logout()
             return True
