@@ -23,8 +23,8 @@ class EarthExplorerDownloader(object):
         self.password = settings['user']['password']
         self.query_csv_path = settings['path']['query_csv']
         self.download_dir = settings['path']['download_dir']
+        self.fail_txt_path = settings['path']['fail_list_txt']
         self.max_threads = settings['max_threads']
-        self.fail_txt_path = settings['fail_list_txt']
 
     def __read_query_csv(self, csvPath):
         queryDicts = []
@@ -68,6 +68,7 @@ class EarthExplorerDownloader(object):
 
     def __download_scene(self, scene_id, output_dir):
         try:
+            raise Exception()
             ee = EarthExplorer(self.username, self.password)
             ee.download(scene_id, output_dir)
             ee.logout()
@@ -95,9 +96,10 @@ class EarthExplorerDownloader(object):
             task = loop.create_task(self.__download_scene_async(executor, scene_id, self.download_dir))
             tasks.append(task)
         loop.run_until_complete(asyncio.wait(tasks))
-        return [ { 'scene_id': t.result()[0], 'is_sucessful': t.result()[1] } for t in tasks ]
+        return [ { 'scene_id': t.result()[0], 'is_successful': t.result()[1] } for t in tasks ]
 
     def __save2txt(self, error_list, txt_path):
+        error_list = [ f'{t}\n' for t in error_list ]
         with open(txt_path, 'w') as file:
             file.writelines(error_list)
 
@@ -111,7 +113,11 @@ class EarthExplorerDownloader(object):
             print('Start to download...')
             self.__create_output_folder()
             results = self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
-            self.__save2txt([ r['scene_id'] for r in results if not r['is_sucessful'] ], self.fail_txt_path)
+            success_cases = [ r for r in results if r['is_successful'] ]
+            fail_cases = [ r for r in results if not r['is_successful'] ]
+            print(f'Download {len(results)} files, {len(success_cases)} successful and {len(fail_cases)} failed.')
+            print(f'Record the failed cases to {self.fail_txt_path}')
+            self.__save2txt([ f['scene_id'] for f in fail_cases ], self.fail_txt_path)
         print('Finish.')
         
 
