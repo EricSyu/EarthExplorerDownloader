@@ -68,7 +68,6 @@ class EarthExplorerDownloader(object):
 
     def __download_scene(self, scene_id, output_dir):
         try:
-            raise Exception()
             ee = EarthExplorer(self.username, self.password)
             ee.download(scene_id, output_dir)
             ee.logout()
