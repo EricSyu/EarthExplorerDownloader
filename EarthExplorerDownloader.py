@@ -103,23 +103,38 @@ class EarthExplorerDownloader(object):
         with open(txt_path, 'w') as file:
             file.writelines(error_list)
 
-    def go(self):
-        print(f'Read csv: {self.query_csv_path}')
-        queryDicts = self.__read_query_csv(self.query_csv_path)
-        print('Start to search...')
-        sceneInfos = self.__search(queryDicts)
-        print(f'{len(sceneInfos)} scences found !!')
-        if sceneInfos:
+    def start_download_flow(self, scene_ids):
+        if len(scene_ids):
             print('Start to download...')
             self.__create_output_folder()
-            results = self.__download([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+            results = self.__download(scene_ids)
             success_cases = [ r for r in results if r['is_successful'] ]
             fail_cases = [ r for r in results if not r['is_successful'] ]
             print(f'Download {len(results)} files, {len(success_cases)} successful and {len(fail_cases)} failed.')
             print(f'Record the failed cases to {self.fail_txt_path}')
             self.__save2txt([ f['scene_id'] for f in fail_cases ], self.fail_txt_path)
-        print('Finish.')
-        
+            print('Download finished.')
+
+    def go(self):
+        if os.path.exists(self.fail_txt_path):
+            with open(self.fail_txt_path) as file:
+                failed_scene_ids = file.readlines()
+            print(f'偵測到上一次下載失敗的{len(failed_scene_ids)}個Cases')
+            redownload_ans = input(f'請問是否需要重新下載(Y/N):')
+            if redownload_ans == 'Y' :
+                failed_scene_ids = [ s.strip('\n') for s in failed_scene_ids ]
+                self.start_download_flow(failed_scene_ids)
+                return
+            elif redownload_ans != 'N':
+                return
+
+        print(f'Read csv: {self.query_csv_path}')
+        queryDicts = self.__read_query_csv(self.query_csv_path)
+        print('Start to search...')
+        sceneInfos = self.__search(queryDicts)
+        print(f'{len(sceneInfos)} scences found !!')
+        self.start_download_flow([ sceneInfo['displayId'] for sceneInfo in sceneInfos ])
+
 
 downloader = EarthExplorerDownloader()
 downloader.go()
