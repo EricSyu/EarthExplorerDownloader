@@ -1,0 +1,11 @@
+certifi==2021.5.30
+chardet==4.0.0
+click==7.1.2
+idna==2.10
+landsatxplore==0.13.0
+python-dateutil==2.8.1
+requests==2.25.1
+Shapely==1.7.1
+six==1.16.0
+tqdm==4.61.2
+urllib3==1.26.6
